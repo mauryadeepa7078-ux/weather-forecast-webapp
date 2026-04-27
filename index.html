@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyCast AI | Smart Weather Analytics Dashboard</title>
+    <meta name="description" content="Professional AI-powered weather analytics and forecasting dashboard with smart chat assistant.">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Map (Leaflet) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-card glass">
+            <div class="auth-header">
+                <i data-lucide="cloud-lightning" class="logo-icon"></i>
+                <h2>SkyCast AI</h2>
+                <p id="authSubtitle">Please login to access your dashboard</p>
+            </div>
+            
+            <div id="loginForm" class="auth-form hidden">
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="name@company.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button class="btn-primary auth-btn" id="loginBtn">Login to Dashboard</button>
+                <p class="auth-switch">Don't have an account? <a href="#" id="showRegister">Register here</a></p>
+            </div>
+
+            <div id="registerForm" class="auth-form">
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="regName" placeholder="John Doe">
+                </div>
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="regEmail" placeholder="name@company.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="regPassword" placeholder="••••••••">
+                </div>
+                <button class="btn-primary auth-btn" id="registerBtn">Create Account</button>
+                <p class="auth-switch">Already have an account? <a href="#" id="showLogin">Login here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="cloud-lightning" class="logo-icon"></i>
+                    <span>SkyCast AI</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-view="dashboard">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-view="analytics">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#" class="nav-item" data-view="chat">
+                    <i data-lucide="message-square"></i>
+                    <span>AI Assistant</span>
+                </a>
+                <a href="#" class="nav-item" data-view="map">
+                    <i data-lucide="globe"></i>
+                    <span>Global Map</span>
+                </a>
+                <a href="#" class="nav-item" data-view="comparison">
+                    <i data-lucide="layers"></i>
+                    <span>Compare</span>
+                </a>
+                <a href="#" class="nav-item" data-view="favorites">
+                    <i data-lucide="star"></i>
+                    <span>Favorites</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNameLabel">User</span>
+                        <span class="user-status">Free Account</span>
+                    </div>
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+                    <i data-lucide="moon" id="themeIcon"></i>
+                </button>
+                <button class="logout-btn" id="logoutBtn" title="Logout">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-container">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="citySearch" placeholder="Search for a city (e.g. London, Tokyo)..." autocomplete="off">
+                    <button class="gps-btn" id="gpsBtn" title="Use current location">
+                        <i data-lucide="locate-fixed"></i>
+                    </button>
+                    <div id="searchSuggestions" class="suggestions-dropdown hidden"></div>
+                </div>
+                <div class="header-actions">
+                    <div class="unit-toggle" id="unitToggleBox">
+                        <button class="unit-btn active" data-unit="metric">°C</button>
+                        <button class="unit-btn" data-unit="imperial">°F</button>
+                    </div>
+                    <div class="date-time">
+                        <span id="currentDate">-- --, ----</span>
+                        <span id="currentTime">--:--</span>
+                    </div>
+                    <button class="notification-btn" id="notifBtn">
+                        <i data-lucide="bell"></i>
+                        <span class="badge"></span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-viewport" id="contentViewport">
+                <!-- Dashboard View -->
+                <section id="dashboardView" class="view active">
+                    <div class="dashboard-grid">
+                        <!-- Main Weather Card -->
+                        <div class="card weather-main-card glass">
+                            <div class="weather-info">
+                                <div class="location-box">
+                                    <h1 id="cityName">--</h1>
+                                    <button class="fav-icon-btn" id="favToggleBtn" title="Add to favorites">
+                                        <i data-lucide="star"></i>
+                                    </button>
+                                    <p id="weatherDesc">--</p>
+                                </div>
+                                <div class="temp-box">
+                                    <span id="mainTemp">--</span><span class="unit">°C</span>
+                                </div>
+                                <div class="high-low">
+                                    <span>H: <span id="tempHigh">--</span>°</span>
+                                    <span>L: <span id="tempLow">--</span>°</span>
+                                </div>
+                            </div>
+                            <div class="weather-visual">
+                                <!-- Weather Icon placeholder -->
+                                <div id="weatherIconLarge" class="weather-icon-l">
+                                    <i data-lucide="sun" size="120"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Highlights Grid -->
+                        <div class="highlights-grid">
+                            <div class="card stat-card glass">
+                                <span class="label">Humidity</span>
+                                <div class="value-box">
+                                    <i data-lucide="droplets"></i>
+                                    <span id="humidityVal">--%</span>
+                                </div>
+                                <div class="progress-bar"><div id="humidityBar" style="width: 0%"></div></div>
+                            </div>
+                            <div class="card stat-card glass">
+                                <span class="label">Wind Speed</span>
+                                <div class="value-box">
+                                    <i data-lucide="wind"></i>
+                                    <span id="windVal">-- km/h</span>
+                                </div>
+                                <p class="sub-label" id="windDir">Direction: --</p>
+                            </div>
+                            <div class="card stat-card glass">
+                                <span class="label">UV Index</span>
+                                <div class="value-box">
+                                    <i data-lucide="sun"></i>
+                                    <span id="uvVal">--</span>
+                                </div>
+                                <p class="sub-label" id="uvLevel">Low</p>
+                            </div>
+                            <div class="card stat-card glass">
+                                <span class="label">Pressure</span>
+                                <div class="value-box">
+                                    <i data-lucide="gauge"></i>
+                                    <span id="pressureVal">-- hPa</span>
+                                </div>
+                                <p class="sub-label">Surface level</p>
+                            </div>
+                            <div class="card stat-card glass">
+                                <span class="label">Visibility</span>
+                                <div class="value-box">
+                                    <i data-lucide="eye"></i>
+                                    <span id="visibilityVal">-- km</span>
+                                </div>
+                                <p class="sub-label" id="visibilityStatus">Clear</p>
+                            </div>
+                            <div class="card stat-card glass">
+                                <span class="label">Sunrise & Sunset</span>
+                                <div class="sun-times">
+                                    <div class="sun-item">
+                                        <i data-lucide="sunrise" class="sun-icon"></i>
+                                        <span id="sunriseTime">--:--</span>
+                                    </div>
+                                    <div class="sun-item">
+                                        <i data-lucide="sunset" class="sun-icon"></i>
+                                        <span id="sunsetTime">--:--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Forecast Card -->
+                        <div class="card forecast-card glass">
+                            <h3>7-Day Forecast</h3>
+                            <div class="forest-list" id="forecastList">
+                                <!-- Dynamic entries -->
+                                <div class="skeleton-loader"></div>
+                            </div>
+                        </div>
+
+                        <!-- Chart Card -->
+                        <div class="card chart-card glass">
+                            <div class="chart-header">
+                                <h3>Temperature Trends (24h)</h3>
+                                <div class="chart-legend">
+                                    <span class="dot temp"></span> Temp
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="tempChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Analytics View -->
+                <section id="analyticsView" class="view">
+                    <div class="analytics-container">
+                        <div class="analytics-grid">
+                            <div class="card glass">
+                                <h3>Hourly Temperature Forecast</h3>
+                                <div class="chart-container" style="height: 300px;">
+                                    <canvas id="hourlyTempChartLarge"></canvas>
+                                </div>
+                            </div>
+                            <div class="card glass">
+                                <h3>Precipitation Probability</h3>
+                                <div class="chart-container" style="height: 300px;">
+                                    <canvas id="rainChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="card glass">
+                                <h3>Wind Speed Forecast (Next 24h)</h3>
+                                <div class="chart-container" style="height: 300px;">
+                                    <canvas id="windChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="card glass">
+                                <h3>Humidity Trends</h3>
+                                <div class="chart-container" style="height: 300px;">
+                                    <canvas id="humidityChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI Chat View -->
+                <section id="chatView" class="view">
+                    <div class="chat-container">
+                        <aside class="chat-sidebar">
+                            <button class="new-chat-btn" id="newChatBtn">
+                                <i data-lucide="plus"></i> New Chat
+                            </button>
+                            <div class="chat-history-list" id="chatHistoryList">
+                                <!-- History items -->
+                            </div>
+                        </aside>
+                        <div class="chat-main">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="welcome-message">
+                                    <h2>Hello! I'm SkyAI Assistant</h2>
+                                    <p>Ask me anything about weather, what to wear, or travel tips.</p>
+                                    <div class="suggestion-chips">
+                                        <button class="chip">Should I carry an umbrella?</button>
+                                        <button class="chip">What's the best time to drive?</button>
+                                        <button class="chip">Clothing advice for tonight</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <div class="input-wrapper">
+                                    <button class="voice-btn" id="voiceInputBtn" title="Speak to AI">
+                                        <i data-lucide="mic"></i>
+                                    </button>
+                                    <textarea id="chatInput" placeholder="Message SkyAI..." rows="1"></textarea>
+                                    <button class="send-btn" id="sendChatBtn">
+                                        <i data-lucide="send"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Global Map View -->
+                <section id="mapView" class="view">
+                    <div class="map-container">
+                        <div class="card glass" style="height: 100%; padding: 0;">
+                            <div id="weatherMap"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Comparison View -->
+                <section id="comparisonView" class="view">
+                    <div class="comparison-container">
+                        <h2>Multi-City Comparison</h2>
+                        <div class="comparison-controls">
+                            <input type="text" id="compareSearch" placeholder="Add city to compare...">
+                            <button class="btn-primary" id="addCompareBtn">Add City</button>
+                        </div>
+                        <div class="comparison-table-wrapper card glass">
+                            <table id="comparisonTable">
+                                <thead>
+                                    <tr>
+                                        <th>City</th>
+                                        <th>Condition</th>
+                                        <th>Temp</th>
+                                        <th>Humidity</th>
+                                        <th>Wind</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="comparisonBody">
+                                    <!-- City rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Favorites View -->
+                <section id="favoritesView" class="view">
+                    <div class="favorites-container">
+                        <div class="header-with-action">
+                            <h2 style="margin-bottom: 0.5rem;">My Favorite Locations</h2>
+                            <p style="color: var(--text-muted); margin-bottom: 2rem;">Quick access to your most-watched cities</p>
+                        </div>
+                        <div class="favorites-grid" id="favoritesGrid">
+                            <!-- Favorite city cards will be injected here -->
+                            <div class="empty-favorites" style="grid-column: 1/-1; text-align: center; padding: 4rem;">
+                                <i data-lucide="star" size="48" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+                                <p style="color: var(--text-muted);">You haven't added any favorites yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="notifModal" class="modal hidden">
+        <div class="modal-content glass">
+            <h3>Notifications</h3>
+            <div id="notifList"></div>
+            <button class="close-modal">Close</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
